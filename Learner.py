@@ -59,29 +59,30 @@ def inc_Q(s, a, inc):
 
 def run():
     global discount
-    time.sleep(5)
+    time.sleep(1)
     alpha = 1
     t = 1
     while True:
         # Pick the right action
         s = World.player
         max_act, max_val = max_Q(s)
-        #print "optimal action:", max_act, max_val
         (s, a, r, s2) = do_action(max_act)
-        #print s, a, r, s2
 
         # Update Q
         max_act, max_val = max_Q(s2)
-        # This kind of works with alpha=t^-2: inc_Q(s, a, (r + alpha * max_val))
         inc_Q(s, a, alpha*(r + discount * max_val))
 
-        #print ""
+        # Check if the game has restarted
         t += 1.0
         if World.has_restarted():
             World.restart_game()
             time.sleep(0.01)
             t = 1.0
+
+        # Update the learning rate
         alpha = pow(t, -0.1)
+
+        # MODIFY THIS SLEEP IF THE GAME IS GOING TOO FAST.
         time.sleep(0.1)
 
 
