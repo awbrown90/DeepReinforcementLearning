@@ -3,8 +3,8 @@ from Tkinter import *
 master = Tk()
 
 triangle_size = 0.1
-cell_score_min = 0.03
-cell_score_max = 0.1
+cell_score_min = -0.2
+cell_score_max = 0.2
 Width = 100
 (x, y) = (5, 5)
 actions = ["up", "down", "left", "right"]
@@ -62,13 +62,8 @@ render_grid()
 
 def set_cell_score(state, action, val):
     global cell_score_min, cell_score_max
-    #if val < cell_score_min:
-    #    cell_score_min = val
-    #if val > cell_score_max:
-    #    cell_score_max = val
-    print val
     triangle = cell_scores[state][action]
-    green_dec = min(255, max(0, int((val+cell_score_min)*255/(cell_score_max - cell_score_min))))
+    green_dec = int(min(255, max(0, (val - cell_score_min) * 255.0 / (cell_score_max - cell_score_min))))
     green = hex(green_dec)[2:]
     red = hex(255-green_dec)[2:]
     if len(red) == 1:

@@ -46,14 +46,15 @@ def max_Q(s):
     val = None
     act = None
     for a, q in Q[s].items():
-        if val == None or (q > val):
+        if val is None or (q > val):
             val = q
             act = a
     return act, val
 
 
-def inc_Q(s, a, inc):
-    Q[s][a] += inc
+def inc_Q(s, a, alpha, inc):
+    Q[s][a] *= 1 - alpha
+    Q[s][a] += alpha * inc
     World.set_cell_score(s, a, Q[s][a])
 
 
@@ -70,7 +71,7 @@ def run():
 
         # Update Q
         max_act, max_val = max_Q(s2)
-        inc_Q(s, a, alpha*(r + discount * max_val))
+        inc_Q(s, a, alpha, r + discount * max_val)
 
         # Check if the game has restarted
         t += 1.0
