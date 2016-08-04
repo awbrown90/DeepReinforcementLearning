@@ -2,6 +2,7 @@ __author__ = 'philippe'
 import World
 import threading
 import time
+import random
 
 discount = 0.3
 actions = World.actions
@@ -45,7 +46,10 @@ def do_action(action):
 def max_Q(s):
     val = None
     act = None
-    for a, q in Q[s].items():
+    items = Q[s]
+    random_actions = random.sample(items,len(items))
+    for a in random_actions:
+    	q =items[a]
         if val is None or (q > val):
             val = q
             act = a
