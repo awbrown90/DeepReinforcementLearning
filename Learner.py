@@ -1,4 +1,4 @@
-__author__ = 'philippe'
+__author__ = 'Aaron Brown'
 import World
 import threading
 import time
@@ -16,13 +16,11 @@ for state in states:
     temp = {}
     for action in actions:
         temp[action] = 0.1
-        World.set_cell_score(state, action, temp[action])
     Q[state] = temp
 
-for (i, j, c, w) in World.specials:
+for (i, j, c, w) in World.goal:
     for action in actions:
         Q[(i, j)][action] = w
-        World.set_cell_score((i, j), action, w)
 
 
 def do_action(action):
@@ -59,7 +57,6 @@ def max_Q(s):
 def inc_Q(s, a, alpha, inc):
     Q[s][a] *= 1 - alpha
     Q[s][a] += alpha * inc
-    World.set_cell_score(s, a, Q[s][a])
 
 
 def run():
@@ -71,6 +68,7 @@ def run():
         # Pick the right action
         s = World.player
         max_act, max_val = max_Q(s)
+        
         (s, a, r, s2) = do_action(max_act)
 
         # Update Q
