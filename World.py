@@ -1,5 +1,6 @@
 __author__ = 'Aaron Brown'
 from Tkinter import *
+import maze_gen
 master = Tk()
 
 wall_width = 90
@@ -14,8 +15,7 @@ restart = False
 walk_reward = -0.1
 
 #wall for rows and columns
-rows = [[1,1,1,1,1],[1,0,0,1,0],[1,0,0,0,0],[0,0,1,0,0],[0,0,1,1,0],[1,1,1,1,1]]
-columns = [[1,0,1,0,0,1],[1,0,1,1,1,1],[1,1,1,1,1,1],[1,0,0,0,0,1],[1,1,0,1,0,1]]
+rows, columns = maze_gen.generate(5)
 goal = [(2, 2, "green", 10)]
 
 def render_grid():
@@ -121,3 +121,6 @@ board.grid(row=0, column=0)
 
 def start_game():
 	master.mainloop()
+
+
+
