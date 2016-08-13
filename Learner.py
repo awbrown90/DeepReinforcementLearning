@@ -75,7 +75,7 @@ def run():
         # Pick the right action
         x, y = World.player
 	u,r,d,l = World.sense_walls()
-	print 'x:{} y:{} u:{} r:{} d:{} l:{}'.format(x,y,u,r,d,l)
+	#print 'x:{} y:{} u:{} r:{} d:{} l:{}'.format(x,y,u,r,d,l)
 
     	s = (x,y,u,r,d,l)
         max_act, max_val = max_Q(s)

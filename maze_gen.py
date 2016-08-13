@@ -35,6 +35,7 @@ class MazeCell:
 
 #generate a random maze
 def generate(maze_size):
+	
 	global walls
 	global rows
 	global columns 
@@ -43,6 +44,7 @@ def generate(maze_size):
 	walls = maze_size
 	rows = [[1 for i in range(walls)] for j in range(walls+1)] 
 	columns = [[1 for i in range(walls+1)] for j in range(walls)] 
+
 	# If maze_size is 5
 	#rows = [[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1]]
 	#columns = [[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1]]
@@ -57,7 +59,7 @@ def generate(maze_size):
 	currentCell = 0
 	cells[currentCell].visited = True
 	unvistedCells -= 1
-
+	
 	#While there are unvisited cells
 	while (unvistedCells > 0):
 		nextCell = chooseUnvisitedNeighbor(currentCell)
@@ -70,7 +72,8 @@ def generate(maze_size):
 			unvistedCells -= 1
 		elif(cell_stack.size() > 0):
 			currentCell = cell_stack.pop()
-
+	
+	cells = [] #reset cells for when method is called again
 	return rows, columns
 
 def chooseUnvisitedNeighbor(currentCell):

@@ -14,6 +14,7 @@ score = 10
 restart = False
 walk_reward = -0.1
 goal_reward = 10
+me = 0
 
 #wall for rows and columns
 rows, columns = maze_gen.generate(5)
@@ -38,9 +39,19 @@ def render_grid():
 			if columns[n][i] is 1:
 				board.create_rectangle(i*pip_width+i*wall_width, (n+1)*pip_width+n*wall_width, (i+1)*pip_width+i*wall_width, (n+1)*pip_width+(n+1)*wall_width, fill="blue", width=1)
 
+	board.grid(row=0, column=0)
+
+def render_player():
+	global me
+	me = board.create_rectangle((player[0]+1)*pip_width+player[0]*wall_width+wall_width*1/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*1/3,
+			(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3, fill="black", width=1, tag="me")	
+
 render_grid()
+render_player()
 
 def try_move(dx, dy):
+
+	#render_grid()
 	global player, x, y, score, walk_reward, goal_reward, me, restart
 	if restart == True:
 		restart_game()
@@ -109,18 +120,14 @@ def call_right(event):
 def restart_game():
 	#print "lets restart"
 	global player, score, me, restart, rows, columns
-	#rows, columns = maze_gen.generate(5)
-	#print "reset stuff"
-	#render_grid()
 
-	#print "rendered"
+	rows, columns = rows, columns = maze_gen.generate(5)	
+	render_grid()
+	render_player()
 
 	player = (0, y-1)
 	score = 1
 	restart = False
-	board.coords(me, (player[0]+1)*pip_width+player[0]*wall_width+wall_width*1/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*1/3,
-									(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3)
-	#print "done with this"
 
 def has_restarted():
 	return restart
@@ -129,11 +136,6 @@ master.bind("<Up>", call_up)
 master.bind("<Down>", call_down)
 master.bind("<Right>", call_right)
 master.bind("<Left>", call_left)
-
-me = board.create_rectangle((player[0]+1)*pip_width+player[0]*wall_width+wall_width*1/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*1/3,
-	(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3, fill="black", width=1, tag="me")
-
-board.grid(row=0, column=0)
 
 
 def start_game():
