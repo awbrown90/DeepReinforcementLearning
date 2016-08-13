@@ -7,10 +7,15 @@ import random
 discount = 0.3
 actions = World.actions
 states = []
+#store states for positions and surrounding walls for a total of 400 combinations if 5x5, 4096 if 16x16
 Q = {}
 for i in range(World.x):
     for j in range(World.y):
-        states.append((i, j))
+    	for up in [0,1]:
+    		for right in [0,1]:
+    			for down in [0,1]:
+    				for left in [0,1]:
+        				states.append((i, j,up,right,down,left))
 
 for state in states:
     temp = {}
@@ -18,27 +23,26 @@ for state in states:
         temp[action] = 0.1
     Q[state] = temp
 
-for (i, j, c, w) in World.goal:
-    for action in actions:
-        Q[(i, j)][action] = w
-
-
 def do_action(action):
-    s = World.player
-    r = -World.score
-    if action == actions[0]:
-        World.try_move(0, -1)
-    elif action == actions[1]:
-        World.try_move(0, 1)
-    elif action == actions[2]:
-        World.try_move(-1, 0)
-    elif action == actions[3]:
-        World.try_move(1, 0)
-    else:
-        return
-    s2 = World.player
-    r += World.score
-    return s, action, r, s2
+	x, y = World.player
+	u,r,d,l = World.sense_walls()
+    	s = (x,y,u,r,d,l)
+    	reward = -World.score
+    	if action == actions[0]:
+        	World.try_move(0, -1)
+    	elif action == actions[1]:
+        	World.try_move(0, 1)
+    	elif action == actions[2]:
+        	World.try_move(-1, 0)
+    	elif action == actions[3]:
+        	World.try_move(1, 0)
+    	else:
+        	return
+    	x, y = World.player
+    	u,r,d,l = World.sense_walls()
+    	s2 = (x,y,u,r,d,l)
+    	reward += World.score
+    	return s, action, reward, s2
 
 
 def max_Q(s):
@@ -46,11 +50,14 @@ def max_Q(s):
     act = None
     items = Q[s]
     random_actions = random.sample(items,len(items))
+    
     for a in random_actions:
     	q =items[a]
+    	
         if val is None or (q > val):
             val = q
             act = a
+    
     return act, val
 
 
@@ -66,14 +73,19 @@ def run():
     t = 1
     while True:
         # Pick the right action
-        s = World.player
+        x, y = World.player
+	u,r,d,l = World.sense_walls()
+	print 'x:{} y:{} u:{} r:{} d:{} l:{}'.format(x,y,u,r,d,l)
+
+    	s = (x,y,u,r,d,l)
         max_act, max_val = max_Q(s)
         
-        (s, a, r, s2) = do_action(max_act)
+        (s, action, reward, s2) = do_action(max_act)
+        
 
         # Update Q
         max_act, max_val = max_Q(s2)
-        inc_Q(s, a, alpha, r + discount * max_val)
+        inc_Q(s, action, alpha, reward + discount * max_val)
 
         # Check if the game has restarted
         t += 1.0
@@ -86,7 +98,7 @@ def run():
         alpha = pow(t, -0.1)
 
         # MODIFY THIS SLEEP IF THE GAME IS GOING TOO FAST.
-        time.sleep(0.1)
+        time.sleep(.1)
 
 
 t = threading.Thread(target=run)

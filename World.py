@@ -13,13 +13,14 @@ player = (0, y-1)
 score = 10
 restart = False
 walk_reward = -0.1
+goal_reward = 10
 
 #wall for rows and columns
 rows, columns = maze_gen.generate(5)
-goal = [(2, 2, "green", 10)]
+goal = (2, 2)
 
 def render_grid():
-	global specials, walls, Width, x, y, player
+	global walls, Width, x, y, player
 	#creat the white base board
 	board.create_rectangle(0, 0, (x+1)*pip_width+x*wall_width, (y+1)*pip_width+y*wall_width, fill="white", width=1)
 	for i in range(x+1):
@@ -40,7 +41,7 @@ def render_grid():
 render_grid()
 
 def try_move(dx, dy):
-	global player, x, y, score, walk_reward, me, restart
+	global player, x, y, score, walk_reward, goal_reward, me, restart
 	if restart == True:
 		restart_game()
 	new_x = player[0] + dx
@@ -50,17 +51,25 @@ def try_move(dx, dy):
 		board.coords(me, (new_x+1)*pip_width+new_x*wall_width+wall_width*1/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*1/3, 
 													(new_x+1)*pip_width+new_x*wall_width+wall_width*2/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*2/3)
 		player = (new_x, new_y)
-		for (i, j, c, w) in goal:
-			if new_x == i and new_y == j:
-				score -= walk_reward
-				score += w
-				if score > 0:
-					print "Success! score: ", score
-				else:
-					print "Fail! score: ", score
-				restart = True
+		
+		if new_x == goal[0] and new_y == goal[0]:
+			score -= walk_reward
+			score += goal_reward
+			if score > 0:
+				print "Success! score: ", score
+			else:
+				print "Fail! score: ", score
+			restart = True
 			return
-				#print "score: ", score
+				
+def sense_walls():
+	curr_x = player[0]
+	curr_y = player[1]
+	up = 1 if rows[curr_y][curr_x] == 1 else 0
+	right = 1 if columns[curr_y][curr_x+1] == 1 else 0
+	down = 1 if rows[curr_y+1][curr_x] == 1 else 0
+	left = 1 if columns[curr_y][curr_x] == 1 else 0
+	return (up, right, down, left)
 
 def wall_check(curr_x, curr_y, dx, dy):
 	#if going right
@@ -98,12 +107,20 @@ def call_right(event):
 
 
 def restart_game():
-	global player, score, me, restart
+	#print "lets restart"
+	global player, score, me, restart, rows, columns
+	#rows, columns = maze_gen.generate(5)
+	#print "reset stuff"
+	#render_grid()
+
+	#print "rendered"
+
 	player = (0, y-1)
 	score = 1
 	restart = False
 	board.coords(me, (player[0]+1)*pip_width+player[0]*wall_width+wall_width*1/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*1/3,
 									(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3)
+	#print "done with this"
 
 def has_restarted():
 	return restart
@@ -114,7 +131,7 @@ master.bind("<Right>", call_right)
 master.bind("<Left>", call_left)
 
 me = board.create_rectangle((player[0]+1)*pip_width+player[0]*wall_width+wall_width*1/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*1/3,
-																												(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3, fill="black", width=1, tag="me")
+	(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3, fill="black", width=1, tag="me")
 
 board.grid(row=0, column=0)
 
