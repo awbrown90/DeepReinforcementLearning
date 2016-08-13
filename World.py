@@ -51,7 +51,6 @@ render_player()
 
 def try_move(dx, dy):
 
-	#render_grid()
 	global player, x, y, score, walk_reward, goal_reward, me, restart
 	if restart == True:
 		restart_game()

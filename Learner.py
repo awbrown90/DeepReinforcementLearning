@@ -1,3 +1,4 @@
+from __future__ import print_function
 __author__ = 'Aaron Brown'
 import World
 import threading
@@ -25,6 +26,7 @@ for state in states:
 
 def do_action(action):
 	x, y = World.player
+	print(action)
 	u,r,d,l = World.sense_walls()
     	s = (x,y,u,r,d,l)
     	reward = -World.score
@@ -65,13 +67,16 @@ def inc_Q(s, a, alpha, inc):
     Q[s][a] *= 1 - alpha
     Q[s][a] += alpha * inc
 
+def get_policy():
+	return Q
 
 def run():
     global discount
     time.sleep(1)
     alpha = 1
     t = 1
-    while True:
+    trials = 0
+    while trials < 100:
         # Pick the right action
         x, y = World.player
 	u,r,d,l = World.sense_walls()
@@ -90,15 +95,20 @@ def run():
         # Check if the game has restarted
         t += 1.0
         if World.has_restarted():
-            World.restart_game()
-            time.sleep(0.01)
-            t = 1.0
+        	print('completed trial {}'.format(trials))
+        	trials+=1
+            	World.restart_game()
+            	time.sleep(0.01)
+            	t = 1.0
 
         # Update the learning rate
         alpha = pow(t, -0.1)
 
         # MODIFY THIS SLEEP IF THE GAME IS GOING TOO FAST.
         time.sleep(.1)
+
+    log = open(".\optimal_policy.txt", "w")
+    print(get_policy(), file = log)
 
 
 t = threading.Thread(target=run)
