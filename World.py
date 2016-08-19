@@ -1,12 +1,13 @@
 __author__ = 'Aaron Brown'
 from Tkinter import *
 import maze_gen
+import numpy as np
 master = Tk()
 
 wall_width = 90
 pip_width = 6
 (x, y) = (5, 5)
-actions = ["up", "down", "right", "left"]
+actions = ["up", "right", "down", "left"]
 
 board = Canvas(master, width=(x+1)*pip_width+x*wall_width, height=(y+1)*pip_width+y*wall_width)
 player = (0, y-1)
@@ -81,6 +82,32 @@ def sense_walls():
 	left = 1 if columns[curr_y][curr_x] == 1 else 0
 	return (up, right, down, left)
 
+#state is an (2n-1)x(2n-1) array where n is maze dim. walls are -1 empty spaces are 0 and agent is 1
+def get_state():
+	global x, rows, columns
+	state = []
+	dim = 2*x-1
+
+	#intially fill in all spaces with 0
+	state = [[0 for i in range(dim)] for j in range(dim)]
+	#fill in pegs with -1, these are always static but it helps us format our state in a square
+	for j in np.arange(1,dim-1,2):
+		for i in np.arange(1,dim-1,2):
+			state[j][i] = -1
+
+	#fill in player with 1
+	state[player[1]*2][player[0]*2] = 1
+	#fill in rows 
+	for j in np.arange(1,dim-1,2):
+		for i in np.arange(0,dim,2):
+			state[j][i] = -1*rows[j/2+1][i/2]	
+	#fill in columns 
+	for j in np.arange(0,dim,2):
+		for i in np.arange(1,dim-1,2):
+			state[j][i] = -1*columns[j/2][i/2+1]
+	
+	return state
+
 def wall_check(curr_x, curr_y, dx, dy):
 	#if going right
 	if(dx > 0):
@@ -103,18 +130,14 @@ def wall_check(curr_x, curr_y, dx, dy):
 def call_up(event):
 	try_move(0, -1)
 
+def call_right(event):
+	try_move(1, 0)
 
 def call_down(event):
 	try_move(0, 1)
 
-
 def call_left(event):
 	try_move(-1, 0)
-
-
-def call_right(event):
-	try_move(1, 0)
-
 
 def restart_game():
 	#print "lets restart"
@@ -132,8 +155,8 @@ def has_restarted():
 	return restart
 
 master.bind("<Up>", call_up)
-master.bind("<Down>", call_down)
-master.bind("<Right>", call_right)
+master.bind("<Right>", call_down)
+master.bind("<Down>", call_right)
 master.bind("<Left>", call_left)
 
 
