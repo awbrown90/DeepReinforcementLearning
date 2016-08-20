@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 discount = 0.3
-learning_rate = .01
+learning_rate = .001
 actions = World.actions
 # intialize state to all ones, will get updated later
 state = []
@@ -128,6 +128,9 @@ def do_action(action):
 def run():
     time.sleep(1)
     trials = 0
+    runs = 0
+
+    sleep_value = 0.0
 
     while trials < 100:
 
@@ -140,7 +143,12 @@ def run():
     	# run the CNN and get outputed max action and value based on current state
     	net_out = s.run(action_array_1, feed_dict=feed_dict)
     	max_act = actions[np.argmax(net_out)]
-    	print(max_act)
+
+    	choice = np.random.choice(2,1,p=[0.5,0.5])
+    	
+    	if choice==1 and sleep_value < 1.0:
+    		max_act = actions[np.random.choice(4,1)]
+
     	(s1, action, reward, s2) = do_action(max_act)
 
     	state = s2
@@ -150,7 +158,6 @@ def run():
 
     	_, my_loss = s.run([optimizer, loss], feed_dict=feed_dict)
 
-    	
     	#print(my_loss)
 
     	# Check if the game has restarted
@@ -160,7 +167,17 @@ def run():
     		trials+=1
     		World.restart_game()
     		time.sleep(0.1)
-    	time.sleep(1.0)
+
+    	runs += 1
+
+    	if runs > 100:
+    		World.restart_game()
+    		runs = 0
+
+    	if trials > 90:
+    		sleep_value = 1.0
+
+    	time.sleep(sleep_value)
 
    		# Update the learning rate
    		#

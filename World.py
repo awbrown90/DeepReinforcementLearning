@@ -11,7 +11,7 @@ actions = ["up", "right", "down", "left"]
 
 board = Canvas(master, width=(x+1)*pip_width+x*wall_width, height=(y+1)*pip_width+y*wall_width)
 player = (0, y-1)
-score = 10
+score = 0
 restart = False
 walk_reward = -0.1
 goal_reward = 10
@@ -143,12 +143,12 @@ def restart_game():
 	#print "lets restart"
 	global player, score, me, restart, rows, columns
 
-	rows, columns = rows, columns = maze_gen.generate(5)	
-	render_grid()
-	render_player()
+	#rows, columns = rows, columns = maze_gen.generate(5)	
+	#render_grid()
+	#render_player()
 
 	player = (0, y-1)
-	score = 1
+	score = 0
 	restart = False
 
 def has_restarted():
