@@ -6,13 +6,17 @@ master = Tk()
 wall_width = 90
 pip_width = 6
 (x, y) = (5, 5)
-actions = ["up", "down", "right", "left"]
+actions = ["up", "right", "down", "left"]
+gui_en = True
 
 board = Canvas(master, width=(x+1)*pip_width+x*wall_width, height=(y+1)*pip_width+y*wall_width)
 player = (0, y-1)
-score = 10
+previous = player
+score = 0
 restart = False
 walk_reward = -0.1
+wall_reward = -1.0
+previous_reward = -0.5
 goal_reward = 10
 me = 0
 
@@ -46,24 +50,37 @@ def render_player():
 	me = board.create_rectangle((player[0]+1)*pip_width+player[0]*wall_width+wall_width*1/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*1/3,
 			(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3, fill="black", width=1, tag="me")	
 
-render_grid()
-render_player()
+if(gui_en):
+	render_grid()
+	render_player()
 
 def try_move(dx, dy):
 
-	global player, x, y, score, walk_reward, goal_reward, me, restart
+	global player, previous, x, y, score, walk_reward, goal_reward, me, restart
 	if restart == True:
 		restart_game()
 	new_x = player[0] + dx
 	new_y = player[1] + dy
-	score += walk_reward
+	reward_record = 0
+	
+
 	if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y) and wall_check( player[0], player[1], dx, dy):
-		board.coords(me, (new_x+1)*pip_width+new_x*wall_width+wall_width*1/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*1/3, 
-													(new_x+1)*pip_width+new_x*wall_width+wall_width*2/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*2/3)
+		if(gui_en):
+			board.coords(me, (new_x+1)*pip_width+new_x*wall_width+wall_width*1/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*1/3, 
+						 (new_x+1)*pip_width+new_x*wall_width+wall_width*2/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*2/3)
+		
+		if(new_x == previous[0] and new_y == previous[1]):
+			score += previous_reward
+			reward_record += previous_reward
+		else:
+			score += walk_reward
+			reward_record += walk_reward
+
+		previous = player
 		player = (new_x, new_y)
 		
 		if new_x == goal[0] and new_y == goal[0]:
-			score -= walk_reward
+			score -= reward_record
 			score += goal_reward
 			if score > 0:
 				print "Success! score: ", score
@@ -71,7 +88,23 @@ def try_move(dx, dy):
 				print "Fail! score: ", score
 			restart = True
 			return
-				
+	else:
+		score += wall_reward
+
+def get_previous():
+	if(player[0]-previous[0] == 0):
+		if(player[1]-previous[1] > 0):
+			return 0
+		elif(player[1]-previous[1] < 0):
+			return 2
+		else:
+			return 4
+	else:
+		if(player[0]-previous[0] > 0):
+			return 3
+		else:
+			return 1
+	
 def sense_walls():
 	curr_x = player[0]
 	curr_y = player[1]
@@ -100,6 +133,9 @@ def wall_check(curr_x, curr_y, dx, dy):
 			return True
 	return False
 
+def no_gui():
+	gui_en = False
+
 def call_up(event):
 	try_move(0, -1)
 
@@ -120,12 +156,13 @@ def restart_game():
 	#print "lets restart"
 	global player, score, me, restart, rows, columns
 
-	rows, columns = rows, columns = maze_gen.generate(5)	
-	render_grid()
-	render_player()
+	rows, columns = rows, columns = maze_gen.generate(5)
+	if(gui_en):	
+		render_grid()
+		render_player()
 
 	player = (0, y-1)
-	score = 1
+	score = 0
 	restart = False
 
 def has_restarted():
