@@ -9,7 +9,7 @@ pip_width = 6
 (x, y) = (5, 5)
 actions = ["up", "right", "down", "left"]
 
-board = Canvas(master, width=(x+1)*pip_width+x*wall_width, height=(y+1)*pip_width+y*wall_width)
+#board = Canvas(master, width=(x+1)*pip_width+x*wall_width, height=(y+1)*pip_width+y*wall_width)
 player = (0, y-1)
 score = 0
 restart = False
@@ -47,8 +47,8 @@ def render_player():
 	me = board.create_rectangle((player[0]+1)*pip_width+player[0]*wall_width+wall_width*1/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*1/3,
 			(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3, fill="black", width=1, tag="me")	
 
-render_grid()
-render_player()
+#render_grid()
+#render_player()
 
 def try_move(dx, dy):
 
@@ -59,8 +59,8 @@ def try_move(dx, dy):
 	new_y = player[1] + dy
 	score += walk_reward
 	if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y) and wall_check( player[0], player[1], dx, dy):
-		board.coords(me, (new_x+1)*pip_width+new_x*wall_width+wall_width*1/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*1/3, 
-													(new_x+1)*pip_width+new_x*wall_width+wall_width*2/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*2/3)
+		#board.coords(me, (new_x+1)*pip_width+new_x*wall_width+wall_width*1/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*1/3, 
+		#											(new_x+1)*pip_width+new_x*wall_width+wall_width*2/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*2/3)
 		player = (new_x, new_y)
 		
 		if new_x == goal[0] and new_y == goal[0]:

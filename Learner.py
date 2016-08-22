@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 discount = 0.3
-learning_rate = .001
+learning_rate = .05
 actions = World.actions
 # intialize state to all ones, will get updated later
 state = []
@@ -22,18 +22,24 @@ target = 0
 
 # The random seed that defines initialization
 SEED = 42
+BATCH_SIZE = 16
 
+#<s,a,r,s'>
 state_input_1 = tf.placeholder(
 	tf.float32,
-	shape=(1,9,9,1))
+	shape=(BATCH_SIZE,9,9,1))
 
-state_input_2 = tf.placeholder(
-	tf.float32,
-	shape=(1,9,9,1))
+action_input = tf.placeholder(
+	tf.bool,
+	shape=(BATCH_SIZE,4))
 
 reward_input = tf.placeholder(
 	tf.float32,
-	shape=())
+	shape=(BATCH_SIZE))
+
+state_input_2 = tf.placeholder(
+	tf.float32,
+	shape=(BATCH_SIZE,9,9,1))
 
 tf_discount = tf.constant(discount)
 
@@ -91,16 +97,26 @@ def network(data, train=False):
 s = tf.InteractiveSession()
 s.as_default()
 
-# Run state through CNN to get list of action values
+# L = .5[r + discount * max a' Q(s', a') - Q(s, a)]^2
+#	     |------target-------|  |prediction|
+
+# Do a feedforward pass for the current state s to get predicted Q-values for all actions.
 action_array_1 = network(state_input_1)
+# Do a feedforward pass for the next state s' and calculate maximum overall network outputs max a' Q(s', a').
 action_array_2 = network(state_input_2)
-# loss is (tt - Q(ss,aa))^2
+max_val = tf.reduce_max(action_array_2)
+# Set Q-value target for action to r + discount * max a' Q(s', a') (use the max calculated in step 2). 
+# For all other actions, set the Q-value target to the same as originally returned from step 1, making the error 0 for those outputs.
+tt = reward_input + tf_discount * max_val
+tt = tf.reshape(tt,(BATCH_SIZE,1))
+target_prep = tf.tile(tt,[1,4])
+target = tf.select(action_input, target_prep, action_array_1)
 
-target = tf.reduce_max(action_array_1)
-tt = tf.add(tf.mul(tf.reduce_max(action_array_2),tf_discount),reward_input) 
-Qerror = tf.sub(tt, target)
-loss = tf.mul(Qerror, Qerror)
+# loss is .5(tt - Q(ss,aa))^2
+Qerror = tf.sub(target, action_array_1)
+loss = .5*tf.reduce_sum(tf.mul(Qerror, Qerror))
 
+# Update the weights using backpropagation.
 optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
 
 tf.initialize_all_variables().run()
@@ -123,65 +139,97 @@ def do_action(action):
 	s2 = World.get_state()
 
 	reward += World.score
-	return state, action, reward, s2
+	return reward, s2
 
 def run():
-    time.sleep(1)
-    trials = 0
-    runs = 0
+    time.sleep(1.0)
+    trials = 0 
 
-    sleep_value = 0.0
+    # intialize replay memory that stores experience <s,a,r,s'>
+    state_data_1 = []
+    max_act_data = []
+    reward_data  = []
+    state_data_2 = []
+    e = 0.9  # the exploration value, starts high and becomes smaller
+    N = 1000 # the size of the replay memory
 
     while trials < 100:
 
-    	# update current state
-    	state = World.get_state()
+    	# run transitions multiple times to get collection of <s,a,r,s'> data thats equal to BATCH_SIZE
 
-    	state_data_1 = np.reshape(state,(1, 9, 9, 1)).astype(np.float32)
-    	feed_dict = {state_input_1: state_data_1 }
+    	for i in range(BATCH_SIZE):
 
-    	# run the CNN and get outputed max action and value based on current state
-    	net_out = s.run(action_array_1, feed_dict=feed_dict)
-    	max_act = actions[np.argmax(net_out)]
+    		# free up replay memory if needed
+    		if(len(state_data_1) > N):
+    			pop_index = random.randrange(len(state_data_1))
+    			state_data_1.pop(pop_index)
+    			max_act_data.pop(pop_index)
+    			reward_data.pop(pop_index)
+    			state_data_2.pop(pop_index)
+    			N -= 1
 
-    	choice = np.random.choice(2,1,p=[0.5,0.5])
+    		# update current state
+    		state = World.get_state()
+
+    		state = np.reshape(state,(9, 9, 1)).astype(np.float32)
+    		state_data_1.append(state)
+
+    		state_prep = []
+    		for i in range(BATCH_SIZE):
+    			state_prep.append(state)
+    		feed_dict = {state_input_1: state_prep}
+
+    		# run the CNN and get outputed max action and value based on current state
+    		net_out_1 = s.run(action_array_1, feed_dict=feed_dict)
     	
-    	if choice==1 and sleep_value < 1.0:
-    		max_act = actions[np.random.choice(4,1)]
+    		max_index = np.argmax(net_out_1[0])
+    		max_act = actions[max_index]
 
-    	(s1, action, reward, s2) = do_action(max_act)
+    		max_act_prep = np.reshape([False, False, False, False],(4)).astype(np.bool)
+    		max_act_prep[max_index] = True
+    		max_act_data.append(max_act_prep)
 
-    	state = s2
-    	state_data_2 = np.reshape(state,(1, 9, 9, 1)).astype(np.float32)
+    		# help exploration early in game
+    		choice = np.random.choice(2,1,p=[1-e,e])
+    		if choice==1:
+    			max_act = actions[np.random.choice(4,1)]
+    			#print('random max action {}'.format(max_act))
+    		#else:
+    			#print(max_act)
+    		reward, s2 = do_action(max_act)
+    		reward_data.append(reward)
 
-    	feed_dict = {state_input_1: state_data_1, state_input_2: state_data_2, reward_input: reward }
+    		state = s2
+    		state = np.reshape(state,(9, 9, 1)).astype(np.float32)
+    		state_data_2.append(state)
+
+    		# Check if the game has restarted
+    		if World.has_restarted():
+    			print('completed trial {}'.format(trials))
+    			e *= .95 # make the exploration smaller
+    			trials+=1
+    			World.restart_game()
+
+    		# MODIFY THIS SLEEP IF THE GAME IS GOING TOO FAST.
+    		N += 1
+    		time.sleep(0.0)
+
+    	# update weights and minimize loss function for BATCH_SIZE amount of data points
+
+    	update = np.arange(len(state_data_1))
+    	update = random.sample(update, BATCH_SIZE)
+
+    	s1_update = [state_data_1[index] for index in update]
+    	a_update  = [max_act_data[index] for index in update]
+    	r_update  = [reward_data[index] for index in update]
+    	s2_update = [state_data_2[index] for index in update]
+
+    	feed_dict = {state_input_1: s1_update, action_input: a_update, reward_input: r_update, state_input_2: s2_update }
 
     	_, my_loss = s.run([optimizer, loss], feed_dict=feed_dict)
 
-    	#print(my_loss)
-
-    	# Check if the game has restarted
-    	
-    	if World.has_restarted():
-    		print('completed trial {}'.format(trials))
-    		trials+=1
-    		World.restart_game()
-    		time.sleep(0.1)
-
-    	runs += 1
-
-    	if runs > 100:
-    		World.restart_game()
-    		runs = 0
-
-    	if trials > 90:
-    		sleep_value = 1.0
-
-    	time.sleep(sleep_value)
-
-   		# Update the learning rate
-   		#
-   		# MODIFY THIS SLEEP IF THE GAME IS GOING TOO FAST.
+    	#print('start: {}'.format(start))
+    	#print('_end_: {}'.format(my_target))
 
     #log = open(".\optimal_policy.txt", "w")
     #print(get_policy(), file = log)
