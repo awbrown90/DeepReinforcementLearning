@@ -21,19 +21,19 @@ target = 0
 
 # The random seed that defines initialization
 GAMMA = 0.7 # decay rate of past observations
-OBSERVE = 500 # timesteps to observe before training
-EXPLORE = 5000 # frames over which to anneal epsilon
+OBSERVE = 15 # timesteps to observe before training
+EXPLORE = 3000 # frames over which to anneal epsilon
 FINAL_EPSILON = 0.01 # final value of epsilon
 INITIAL_EPSILON = 1.0 # starting value of epsilon
-BATCH = 32 # size of minibatch
-REPLAY_MEMORY = 100000 # the size of the replay memory
+BATCH = 15 # size of minibatch
+REPLAY_MEMORY = 500000 # the size of the replay memory
 # store the previous observations in replay memory
 D = deque()
 
 #<s,a,r,s'>
 state_input_1 = tf.placeholder(
 	tf.float32,
-	shape=(BATCH,9,9,1))
+	[None,9,9,1])
 
 action_input = tf.placeholder(
 	tf.bool,
@@ -59,8 +59,14 @@ conv2_weights = tf.Variable(
   tf.truncated_normal([3, 3, 32, 64], # 3x3 filter, depth 16
                       stddev=0.1))
 conv2_biases = tf.Variable(tf.constant(0.1, shape=[64]))
+
+conv3_weights = tf.Variable(
+  tf.truncated_normal([2, 2, 64, 64], # 3x3 filter, depth 16
+                      stddev=0.1))
+conv3_biases = tf.Variable(tf.constant(0.1, shape=[64]))
+
 fc1_weights = tf.Variable(  # fully connected, depth 128.
-  tf.truncated_normal([3 * 3 * 64, 512],
+  tf.truncated_normal([256, 512],
                       stddev=0.1))
 fc1_biases = tf.Variable(tf.constant(0.1, shape=[512]))
 fc2_weights = tf.Variable(
@@ -68,7 +74,7 @@ fc2_weights = tf.Variable(
                       stddev=0.1))
 fc2_biases = tf.Variable(tf.constant(0.1, shape=[4]))
 
-def network(data, train=False):
+def network(data):
 	conv = tf.nn.conv2d(data,
                       conv1_weights,
                       strides=[1, 1, 1, 1],
@@ -76,26 +82,26 @@ def network(data, train=False):
 
 	# Bias and rectified linear non-linearity.
 	relu = tf.nn.relu(tf.nn.bias_add(conv, conv1_biases))
+
 	conv = tf.nn.conv2d(relu,
                       conv2_weights,
                       strides=[1, 1, 1, 1],
                       padding='VALID')
   	relu = tf.nn.relu(tf.nn.bias_add(conv, conv2_biases))
 
+  	conv = tf.nn.conv2d(relu,
+                      conv3_weights,
+                      strides=[1, 1, 1, 1],
+                      padding='VALID')
+  	relu = tf.nn.relu(tf.nn.bias_add(conv, conv3_biases))
+
   	# fully connected layers.
-  	relu_shape = relu.get_shape().as_list()
-  	reshape = tf.reshape(
-      relu,
-      [relu_shape[0], relu_shape[1] * relu_shape[2] * relu_shape[3]])
+  	relu_flat = tf.reshape(relu, [-1,256])
   
   	# Fully connected layer. Note that the '+' operation automatically
   	# broadcasts the biases.
-  	hidden = tf.nn.relu(tf.matmul(reshape, fc1_weights) + fc1_biases)
+  	hidden = tf.nn.relu(tf.matmul(relu_flat, fc1_weights) + fc1_biases)
   
-  	# Add a 50% dropout during training only. Dropout also scales
-  	# activations such that no rescaling is needed at evaluation time.
-  	if train:
-  		hidden = tf.nn.dropout(hidden, 0.5, seed=SEED)
   	return tf.matmul(hidden, fc2_weights) + fc2_biases
 
 s = tf.InteractiveSession()
@@ -154,6 +160,17 @@ def do_action(action):
 	else:
 		return
 
+#update the visual network arrow display in GUI
+def network_triangles():
+	for i in range(World.x):
+		for j in range(World.y):
+			state = World.get_state((i,j))
+			state = np.reshape(state,(1, 9, 9, 1)).astype(np.float32)
+			feed_dict = {state_input_1: state}
+			values = s.run(action_array_1, feed_dict=feed_dict)
+			for action in actions:
+				World.set_cell_score(i,j,action,values)
+
 def run():
     time.sleep(1.0)
     trials = 0 
@@ -167,16 +184,13 @@ def run():
     	# update current state
     	state_1 = World.get_state(World.player)
 
-    	state_1 = np.reshape(state_1,(9, 9, 1)).astype(np.float32)
-    	
-    	state_prep = []
-    	for i in range(BATCH):
-    		state_prep.append(state_1)
-    	feed_dict = {state_input_1: state_prep}
-
-    	# run the CNN and get outputed max action and value based on current state
+    	state_peek = np.reshape(state_1,(1, 9, 9, 1)).astype(np.float32)
+    	state_1    = np.reshape(state_peek,(9, 9, 1)).astype(np.float32)
+    	feed_dict = {state_input_1: state_peek}
     	net_out_1 = s.run(action_array_1, feed_dict=feed_dict)
     	
+    	#World.get_pos_from_state(state_peek)
+    	print(net_out_1[0])
     	max_index = np.argmax(net_out_1[0])
     	max_act = actions[max_index]
     	reward, s2, terminal = see_action(max_act)
@@ -212,6 +226,11 @@ def run():
     		moves = 0
     		World.restart_game()
 
+    	# expiration for the reset, the agent is stuck
+    	if(moves > 500 and t > OBSERVE):
+    		moves = 0
+    		World.restart_game()
+
     	# only train if done observing
     	# update weights and minimize loss function for BATCH_SIZE amount of data points
 
@@ -235,11 +254,20 @@ def run():
 
     		_, my_loss, start, _end_, my_tt, s_prime = s.run([optimizer, loss, action_array_1, target, tt, action_array_2], feed_dict=feed_dict)
 
-    		#print('start: {}'.format(start))
-    		#print('_end_: {}'.format(_end_))
+    		#show visually the updated cells
+    		#state_prep = np.reshape(s1_update,(BATCH,9,9))
+    		#for i in range(BATCH):
+    		#	xu, yu = World.get_pos_from_state(state_prep[i])
+    		#	World.update_show(xu, yu)
+    		#print(World.get_pos_from_state(state_peek))
+    		#run visual analysis of network state space
+    		network_triangles()
+    		print('a update {}'.format(a_update))
+    		print('start: {}'.format(start))
+    		print('_end_: {}'.format(_end_))
     		#print('___s2: {}'.format(s_prime))
-    		#print('___tt: {}'.format(my_tt))
-    		#print('loss_: {}'.format(my_loss))
+    		print('___tt: {}'.format(my_tt))
+    		print('loss_: {}'.format(my_loss))
 
     		#print("new result")
     		#feed_dict = {state_input_1: s1_update, action_input: a_update, reward_input: r_update, state_input_2: s2_update, terminal_input: term } 
@@ -248,7 +276,7 @@ def run():
     		#print('nloss: {}'.format(new_loss))
 
     	# MODIFY THIS SLEEP IF THE GAME IS GOING TOO FAST.
-    	#time.sleep(0.001)
+    	time.sleep(0.5)
     	moves += 1
     	t += 1
 

@@ -16,10 +16,34 @@ walk_reward = -0.1
 wall_reward = -1.0
 goal_reward = 10
 me = 0
+cell_scores = {}
+triangle_size = 0.1
 
 #wall for rows and columns
 rows, columns = maze_gen.generate(5)
 goal = (2, 2)
+
+def create_triangle(i, j, action):
+	if action == actions[0]:
+		return board.create_polygon((i+0.5-triangle_size)*wall_width+(i+1)*pip_width, (j+triangle_size)*wall_width+(j+1)*pip_width,
+                                    (i+0.5+triangle_size)*wall_width+(i+1)*pip_width, (j+triangle_size)*wall_width+(j+1)*pip_width,
+                                    (i+0.5)*wall_width+(i+1)*pip_width, j*wall_width+(j+1)*pip_width,
+                                    fill="green", width=1)
+	elif action == actions[2]:
+		return board.create_polygon((i+0.5-triangle_size)*wall_width+(i+1)*pip_width, (j+1-triangle_size)*wall_width+(j+1)*pip_width,
+                                    (i+0.5+triangle_size)*wall_width+(i+1)*pip_width, (j+1-triangle_size)*wall_width+(j+1)*pip_width,
+                                    (i+0.5)*wall_width+(i+1)*pip_width, (j+1)*wall_width+(j+1)*pip_width,
+                                    fill="green", width=1)
+	elif action == actions[3]:
+		return board.create_polygon((i+triangle_size)*wall_width+(i+1)*pip_width, (j+0.5-triangle_size)*wall_width+(j+1)*pip_width,
+                                    (i+triangle_size)*wall_width+(i+1)*pip_width, (j+0.5+triangle_size)*wall_width+(j+1)*pip_width,
+                                    i*wall_width+(i+1)*pip_width, (j+0.5)*wall_width+(j+1)*pip_width,
+                                    fill="green", width=1)
+	elif action == actions[1]:
+		return board.create_polygon((i+1-triangle_size)*wall_width+(i+1)*pip_width, (j+0.5-triangle_size)*wall_width+(j+1)*pip_width,
+                                    (i+1-triangle_size)*wall_width+(i+1)*pip_width, (j+0.5+triangle_size)*wall_width+(j+1)*pip_width,
+                                    (i+1)*wall_width+(i+1)*pip_width, (j+0.5)*wall_width+(j+1)*pip_width,
+                                    fill="green", width=1)
 
 def render_grid():
 	global walls, Width, x, y, player
@@ -27,6 +51,11 @@ def render_grid():
 	board.create_rectangle(0, 0, (x+1)*pip_width+x*wall_width, (y+1)*pip_width+y*wall_width, fill="white", width=1)
 	for i in range(x+1):
 		for j in range(y+1):
+			#create network signal arrows
+			temp = {}
+			for action in actions:
+				temp[action] = create_triangle(i, j, action)
+			cell_scores[(i,j)] = temp
 			#create the red pips
 			board.create_rectangle(i*pip_width+i*wall_width, j*pip_width+j*wall_width, (i+1)*pip_width+i*wall_width, (j+1)*pip_width+j*wall_width, fill="red", width=1)
 	#create the blue row walls
@@ -41,6 +70,31 @@ def render_grid():
 				board.create_rectangle(i*pip_width+i*wall_width, (n+1)*pip_width+n*wall_width, (i+1)*pip_width+i*wall_width, (n+1)*pip_width+(n+1)*wall_width, fill="blue", width=1)
 
 	board.grid(row=0, column=0)
+
+def set_cell_score(i, j, action, vals):
+	
+	triangle = cell_scores[(i,j)][action]
+	if action == 'up':
+		vact = 0
+	elif action == 'right':
+		vact = 1
+	elif action == 'down':
+		vact = 2
+	elif action == 'left':
+		vact = 3
+	val = vals[0][vact]
+	
+	cell_score_min = np.min(vals)
+	cell_score_max = np.max(vals)
+	green_dec = int(min(255, max(0, (val - cell_score_min) * 255.0 / (cell_score_max - cell_score_min))))
+	green = hex(green_dec)[2:]
+	red = hex(255-green_dec)[2:]
+	if len(red) == 1:
+		red += "0"
+	if len(green) == 1:
+		green += "0"
+	color = "#" + red + green + "00"
+	board.itemconfigure(triangle, fill=color)
 
 def render_player():
 	global me
@@ -104,7 +158,7 @@ def get_state(position):
 	dim = 2*x-1
 
 	#intially fill in all spaces with 0
-	state = [[0 for i in range(dim)] for j in range(dim)]
+	state = [[0.0 for i in range(dim)] for j in range(dim)]
 	#fill in pegs with -1, these are always static but it helps us format our state in a square
 	for j in np.arange(1,dim-1,2):
 		for i in np.arange(1,dim-1,2):
@@ -122,6 +176,18 @@ def get_state(position):
 			state[j][i] = -1*columns[j/2][i/2+1]
 	
 	return state
+
+def get_pos_from_state(state):
+	state = np.reshape(state,(9,9))
+	#print state
+	x, y = np.unravel_index(np.argmax(state), np.shape(state))
+	#print x/2, y/2
+	return x/2, y/2
+
+def update_show(i,j):
+	for action in actions:
+		triangle = cell_scores[(i,j)][action]
+		board.itemconfigure(triangle, fill='blue')
 
 def wall_check(curr_x, curr_y, dx, dy):
 	#if going right
