@@ -74,6 +74,9 @@ def render_grid():
 def set_cell_score(i, j, action, vals):
 	
 	triangle = cell_scores[(i,j)][action]
+	if(i==2 and j==2):
+		board.itemconfigure(triangle, fill='blue') #set center goal cells markers to blue
+		return	
 	if action == 'up':
 		vact = 0
 	elif action == 'right':
