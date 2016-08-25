@@ -11,12 +11,10 @@ gui_en = True
 
 board = Canvas(master, width=(x+1)*pip_width+x*wall_width, height=(y+1)*pip_width+y*wall_width)
 player = (0, y-1)
-previous = player
 score = 0
 restart = False
 walk_reward = -0.1
 wall_reward = -1.0
-previous_reward = -0.5
 goal_reward = 10
 me = 0
 
@@ -56,7 +54,7 @@ if(gui_en):
 
 def try_move(dx, dy):
 
-	global player, previous, x, y, score, walk_reward, goal_reward, me, restart
+	global player, x, y, score, walk_reward, goal_reward, me, restart
 	if restart == True:
 		restart_game()
 	new_x = player[0] + dx
@@ -69,14 +67,11 @@ def try_move(dx, dy):
 			board.coords(me, (new_x+1)*pip_width+new_x*wall_width+wall_width*1/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*1/3, 
 						 (new_x+1)*pip_width+new_x*wall_width+wall_width*2/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*2/3)
 		
-		if(new_x == previous[0] and new_y == previous[1]):
-			score += previous_reward
-			reward_record += previous_reward
-		else:
-			score += walk_reward
-			reward_record += walk_reward
+		
+		
+		score += walk_reward
+		reward_record += walk_reward
 
-		previous = player
 		player = (new_x, new_y)
 		
 		if new_x == goal[0] and new_y == goal[0]:
@@ -90,20 +85,6 @@ def try_move(dx, dy):
 			return
 	else:
 		score += wall_reward
-
-def get_previous():
-	if(player[0]-previous[0] == 0):
-		if(player[1]-previous[1] > 0):
-			return 0
-		elif(player[1]-previous[1] < 0):
-			return 2
-		else:
-			return 4
-	else:
-		if(player[0]-previous[0] > 0):
-			return 3
-		else:
-			return 1
 	
 def sense_walls():
 	curr_x = player[0]
