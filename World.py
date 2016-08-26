@@ -123,14 +123,14 @@ def do_move(dx, dy):
 			print "Arrived at Goal "
 			restart = True
 
-def see_move(dx, dy):
+def see_move(dx, dy, i, j):
 	
 	score = 0
-	new_x = player[0] + dx
-	new_y = player[1] + dy
+	new_x = i + dx
+	new_y = j + dy
 	score += walk_reward
 	terminal = 1
-	if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y) and wall_check( player[0], player[1], dx, dy):
+	if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y) and wall_check( i, j, dx, dy):
 		
 		state = get_state((new_x, new_y))
 		
@@ -141,18 +141,9 @@ def see_move(dx, dy):
 	else:
 		score -= walk_reward
 		score += wall_reward
-		state = get_state(player)
+		state = get_state((i,j))
 
 	return score, state, terminal
-				
-def sense_walls():
-	curr_x = player[0]
-	curr_y = player[1]
-	up = 1 if rows[curr_y][curr_x] == 1 else 0
-	right = 1 if columns[curr_y][curr_x+1] == 1 else 0
-	down = 1 if rows[curr_y+1][curr_x] == 1 else 0
-	left = 1 if columns[curr_y][curr_x] == 1 else 0
-	return (up, right, down, left)
 
 #state is an (2n-1)x(2n-1) array where n is maze dim. walls are -1 empty spaces are 0 and agent is 1
 def get_state(position):
@@ -227,9 +218,9 @@ def restart_game():
 	#print "lets restart"
 	global player, me, restart, rows, columns
 
-	#rows, columns = rows, columns = maze_gen.generate(5)	
-	#render_grid()
-	#render_player()
+	rows, columns = rows, columns = maze_gen.generate(5)	
+	render_grid()
+	render_player()
 
 	player = (0, y-1)
 	restart = False
