@@ -237,12 +237,6 @@ def restart_game():
 def has_restarted():
 	return restart
 
-master.bind("<Up>", call_up)
-master.bind("<Right>", call_down)
-master.bind("<Down>", call_right)
-master.bind("<Left>", call_left)
-
-
 def start_game():
 	master.mainloop()
 

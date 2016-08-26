@@ -20,7 +20,7 @@ target = 0
 # parameter defines how the variables will be initialized.
 
 # The random seed that defines initialization
-GAMMA = 0.7 # decay rate of past observations
+GAMMA = 0.8 # decay rate of past observations
 OBSERVE = 2000 # timesteps to observe before training
 EXPLORE = 3000 # frames over which to anneal epsilon
 FINAL_EPSILON = 0.01 # final value of epsilon
@@ -43,25 +43,25 @@ reward_input = tf.placeholder(
 	tf.float32,
 	shape=(BATCH))
 
-state_input_2 = tf.placeholder(
+max_val_input = tf.placeholder(
 	tf.float32,
-	shape=(BATCH,9,9,1))
+	shape=(BATCH))
 
 terminal_input = tf.placeholder(
 	tf.float32,
 	shape=(BATCH))
 
 conv1_weights = tf.Variable(
-  tf.truncated_normal([5, 5, 1, 32],  # 5x5 filter, depth 8.
+  tf.truncated_normal([5, 5, 1, 16],  # 5x5 filter, depth 8.
                       stddev=0.1))
-conv1_biases = tf.Variable(tf.zeros([32]))
+conv1_biases = tf.Variable(tf.zeros([16]))
 conv2_weights = tf.Variable(
-  tf.truncated_normal([3, 3, 32, 64], # 3x3 filter, depth 16
+  tf.truncated_normal([3, 3, 16, 32], # 3x3 filter, depth 16
                       stddev=0.1))
-conv2_biases = tf.Variable(tf.constant(0.1, shape=[64]))
+conv2_biases = tf.Variable(tf.constant(0.1, shape=[32]))
 
 conv3_weights = tf.Variable(
-  tf.truncated_normal([2, 2, 64, 64], # 3x3 filter, depth 16
+  tf.truncated_normal([2, 2, 32, 64], # 3x3 filter, depth 16
                       stddev=0.1))
 conv3_biases = tf.Variable(tf.constant(0.1, shape=[64]))
 
@@ -113,11 +113,9 @@ sess.as_default()
 # Do a feedforward pass for the current state s to get predicted Q-values for all actions.
 action_array_1 = network(state_input_1)
 # Do a feedforward pass for the next state s' and calculate maximum overall network outputs max a' Q(s', a').
-action_array_2 = network(state_input_2)
-max_val = tf.reduce_max(action_array_2, reduction_indices=[1]) 
 # Set Q-value target for action to r + discount * max a' Q(s', a') (use the max calculated in step 2). 
 # For all other actions, set the Q-value target to the same as originally returned from step 1, making the error 0 for those outputs.
-tt = reward_input + terminal_input * (GAMMA * max_val) 
+tt = reward_input + terminal_input * (GAMMA * max_val_input) 
 tt = tf.reshape(tt,(BATCH,1))
 target_prep = tf.tile(tt,[1,4])
 target = tf.select(action_input, target_prep, action_array_1)
@@ -126,6 +124,21 @@ target = tf.select(action_input, target_prep, action_array_1)
 Qerror = tf.sub(target, action_array_1)
 loss = .5*tf.reduce_sum(tf.mul(Qerror, Qerror))
 
+regularizers = (tf.nn.l2_loss(fc1_weights)+tf.nn.l2_loss(fc1_biases)+tf.nn.l2_loss(fc2_weights)+tf.nn.l2_loss(fc2_biases))
+				
+# Add the regularization term to the loss.
+loss += 5e-5 * regularizers     
+
+# Optimizer: set up a variable that's incremented once per batch and
+# controls the learning rate decay.
+#batch = tf.Variable(0)
+#learning_rate = tf.train.exponential_decay(
+#  1e-3,                # Base learning rate.
+#  batch * BATCH,  # Current index into the dataset.
+#  5000,            # Decay step.
+#  0.95,                # Decay rate.
+#  staircase=True)
+
 # Update the weights using backpropagation.
 optimizer = tf.train.GradientDescentOptimizer(1e-3).minimize(loss)
 
@@ -133,12 +146,12 @@ optimizer = tf.train.GradientDescentOptimizer(1e-3).minimize(loss)
 saver = tf.train.Saver()
 tf.initialize_all_variables().run()
 
-checkpoint = tf.train.get_checkpoint_state("saved_networks")
-if checkpoint and checkpoint.model_checkpoint_path:
-	saver.restore(sess, checkpoint.model_checkpoint_path)
-	print("Successfully loaded:", checkpoint.model_checkpoint_path)
-else:
-	print("Could not find old network weights")
+#checkpoint = tf.train.get_checkpoint_state("saved_networks")
+#if checkpoint and checkpoint.model_checkpoint_path:
+#	saver.restore(sess, checkpoint.model_checkpoint_path)
+#	print("Successfully loaded:", checkpoint.model_checkpoint_path)
+#else:
+#	print("Could not find old network weights")
 
 def see_action(action):
 	
@@ -199,27 +212,32 @@ def run():
     	
     	#World.get_pos_from_state(state_peek)
     	#print(net_out_1[0])
-    	max_index = np.argmax(net_out_1[0])
-    	max_act = actions[max_index]
-    	reward, s2, terminal = see_action(max_act)
-
-    	max_act_prep = np.reshape([False, False, False, False],(4)).astype(np.bool)
-    	max_act_prep[max_index] = True
-
+    	
     	# help exploration early in the game
     	choice = np.random.choice(2,1,p=[1-epsilon,epsilon])
     	if choice==1:
     		random_index = np.random.choice(4,1)
-    		old_act = max_act
-    		max_act = actions[random_index[0]]
+    		max_index = random_index[0]
+    	else:
+    		max_index = np.argmax(net_out_1[0])
+
+    	max_act = actions[max_index]
+
+    	max_act_prep = np.reshape([False, False, False, False],(4)).astype(np.bool)
+    	max_act_prep[max_index] = True
+
+    	reward, s2, terminal = see_action(max_act)
     		
     	do_action(max_act)
 
-    	state_2 = s2
-    	state_2 = np.reshape(state_2,(9, 9, 1)).astype(np.float32)
+    	state_peek_2 = np.reshape(s2,(1, 9, 9, 1)).astype(np.float32)
+    	feed_dict = {state_input_1: state_peek_2}
+    	net_out_2 = sess.run(action_array_1, feed_dict=feed_dict)
+
+    	max_val_data = np.amax(net_out_2)
 
     	# store the transition in D
-        D.append((state_1, max_act_prep, reward, state_2, terminal))
+        D.append((state_1, max_act_prep, reward, max_val_data, terminal))
         if len(D) > REPLAY_MEMORY:
         	D.popleft()
 
@@ -256,12 +274,12 @@ def run():
     		s1_update = [d[0] for d in minibatch]
     		a_update  = [d[1] for d in minibatch]
     		r_update  = [d[2] for d in minibatch]
-    		s2_update = [d[3] for d in minibatch]
+    		mv_update = [d[3] for d in minibatch]
     		term      = [d[4] for d in minibatch]
 
-    		feed_dict = {state_input_1: s1_update, action_input: a_update, reward_input: r_update, state_input_2: s2_update, terminal_input: term}
+    		feed_dict = {state_input_1: s1_update, action_input: a_update, reward_input: r_update, max_val_input: mv_update, terminal_input: term}
 
-    		_, my_loss, start, _end_, my_tt, s_prime = sess.run([optimizer, loss, action_array_1, target, tt, action_array_2], feed_dict=feed_dict)
+    		_, my_loss, start, _end_, my_tt = sess.run([optimizer, loss, action_array_1, target, tt], feed_dict=feed_dict)
 
     		#show visually the updated cells
     		#state_prep = np.reshape(s1_update,(BATCH,9,9))
