@@ -2,11 +2,14 @@ __author__ = 'Aaron Brown'
 #Class to generate random mazes of some nxn dimensions
 import numpy as np
 import random
+from collections import deque
 
 rows = []
 columns = []
 cells = []
 walls = 0
+saved_mazes = []
+saved_size = 0
 
 class Stack:
      def __init__(self):
@@ -33,25 +36,30 @@ class MazeCell:
     		self.y = y
         	self.visited = False
 
+def set_maze_size(size):
+	global saved_size
+	saved_size = size
+
 #generate a random maze
-def generate(maze_size):
+def generate(maze_size, trial):
 	
 	global walls
 	global rows
 	global columns 
 	global cells 
 
+	if(saved_size > 0 and len(saved_mazes) == saved_size):
+		#print "loading maze ", trial%saved_size
+		rows, columns = saved_mazes[trial%saved_size]
+		return rows, columns
+
 	walls = maze_size
 	rows = [[1 for i in range(walls)] for j in range(walls+1)] 
 	columns = [[1 for i in range(walls+1)] for j in range(walls)] 
 
-	# If maze_size is 5
-	#rows = [[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1]]
-	#columns = [[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1],[1,1,1,1,1,1]]
-
 	# DEBUG blank maze
-	#rows = [[1,1,1,1,1],[0,0,1,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,1,0,0],[1,1,1,1,1]]
-	#columns = [[1,0,0,0,0,1],[1,1,0,0,1,1],[1,0,1,1,0,1],[1,1,0,0,1,1],[1,0,0,0,0,1]]
+	#rows = [[1,1,1,1,1],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[1,1,1,1,1]]
+	#columns = [[1,0,0,0,0,1],[1,0,0,0,0,1],[1,0,0,0,0,1],[1,0,0,0,0,1],[1,0,0,0,0,1]]
 	#return rows, columns
 	# DEBUG
 
@@ -63,7 +71,7 @@ def generate(maze_size):
 
 	# DEBUG i maze
 	#rows = [[1,1,1,1,1],[0,0,1,1,0],[0,1,0,0,0],[0,0,0,1,0],[0,1,1,0,0],[1,1,1,1,1]]
-	#columns = [[1,0,0,0,0,1],[1,1,0,0,1,1],[1,0,1,1,0,1],[1,1,0,0,1,1],[1,0,0,0,0,1]]
+	#olumns = [[1,0,0,0,0,1],[1,1,0,0,1,1],[1,0,1,1,0,1],[1,1,0,0,1,1],[1,0,0,0,0,1]]
 	#return rows, columns
 	# DEBUG
 
@@ -93,6 +101,9 @@ def generate(maze_size):
 			currentCell = cell_stack.pop()
 	
 	cells = [] #reset cells for when method is called again
+
+	if(saved_size > 0 and len(saved_mazes) < saved_size):
+		saved_mazes.append((rows,columns))
 	return rows, columns
 
 def chooseUnvisitedNeighbor(currentCell):

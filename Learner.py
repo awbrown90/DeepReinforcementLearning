@@ -6,9 +6,16 @@ import time
 import random
 import numpy as np
 import tensorflow as tf
+import floodfill
 from collections import deque
 
 actions = World.actions
+
+#Turn the GUI on, or off if training
+gui_display = True
+
+if(not gui_display):
+	World.gui_off()
 
 # The variables below hold all the trainable weights for our CNN. For each, the
 
@@ -111,16 +118,6 @@ target = tf.select(action_input, target_prep, action_array_1)
 Qerror = tf.sub(target, action_array_1)
 loss = .5*tf.reduce_sum(tf.mul(Qerror, Qerror))
 
-# Optimizer: set up a variable that's incremented once per batch and
-# controls the learning rate decay.
-#batch = tf.Variable(0)
-#learning_rate = tf.train.exponential_decay(
-#  1e-3,                # Base learning rate.
-#  batch * BATCH,  # Current index into the dataset.
-#  5000,            # Decay step.
-#  0.95,                # Decay rate.
-#  staircase=True)
-
 # Update the weights using backpropagation.
 optimizer = tf.train.GradientDescentOptimizer(1e-3).minimize(loss)
 
@@ -191,26 +188,55 @@ def network_triangles():
 
 			D.append((state_peek_1, try_act_prep, reward, max_val_data, terminal))
 
-			for action in actions:
-				World.set_cell_score(i,j,action,values_1)
-			
+			if(gui_display):
+				for action in actions:
+					World.set_cell_score(i,j,action,values_1)
+
 	return D
 
 def run():
-    time.sleep(1.0)
-    trials = 0 
+	#initalize variables
+    trials = 1 
+    moves = 1
     t = 0
-    moves = 0
-    while 1:
+    hit_one = True
+
+    #t0_floodfill = time.time()
+    floodfill.FloodFillValues()
+    #t1_floodfill = time.time()
+
+    #print('running floodfill took {}'.format(t1_floodfill-t0_floodfill))
+
+    opt_moves = floodfill.get_value(0,4)
+
+    sub_trials = 1
+
+    # variables used for running tests, note that some of these are not really compatiable with each other. Sort of hacked together for testing purposes
+    train = True # used to train the network
+    maze_space = -1 # number of saved mazes to iterate through, -1 means no iteration and always use new maze every time
+    save_trial = 500 # save network off after every so many trials, -1 to disable save
+    number_trial = -1 # number of trials to run, -1 for indefinite
+    max_moves = -1 # max number of moves before restarting, -1 for no limit
+
+
+    World.set_maze_size(maze_space)
+
+    while trials < number_trial or (number_trial == -1):
 
     	# run transitions multiple times to get collection of <s,a,r,s'> data thats equal to BATCH_SIZE
 
     	# update current state
     	state_1 = World.get_state(World.player)
 
+    	#print(state_1)
+
     	state_peek = np.reshape(state_1,(1, 9, 9, 1)).astype(np.float32)
     	feed_dict = {state_input_1: state_peek}
+    	#t0_network = time.time()
     	net_out_1 = sess.run(action_array_1, feed_dict=feed_dict)
+    	#t1_network = time.time()
+
+    	#print('running the network took {}'.format(t1_network-t0_network))
     	
     	#World.get_pos_from_state(state_peek)
     	#print(net_out_1[0])
@@ -222,43 +248,71 @@ def run():
     	do_action(max_act)
 
     	# Check if the game has restarted
-    	if World.has_restarted():
-    		print('completed trial {}'.format(trials))
-    		print('it took {} moves'.format(moves))
-    		print('time was {}'.format(t))
+    	if World.has_restarted() or (moves > max_moves and max_moves > 0):
 
-    		trials+=1
+    		if(moves==opt_moves or (trials < maze_space or maze_space < 0)):
+    			trials+=1
+    			hit_one = True
+
+    		if(moves < max_moves or max_moves == -1):
+    			sub_trials+=1
     		moves = 0
-    		World.restart_game()
+
+    		#DEBUG
+    		print('at trial {}'.format(trials))
+    		#print('at subtrial {}'.format(sub_trials))
+    			
+    		World.restart_game(trials)
+
+    		#recalculate optimum number of moves
+    		#t0_floodfill = time.time()
+    		floodfill.FloodFillValues()
+    		#t1_floodfill = time.time()
+    		#print('running floodfill took {}'.format(t1_floodfill-t0_floodfill))
+    		opt_moves = floodfill.get_value(0,4)
+
+    		# save progress every so many iterations
+        	if save_trial > 0 and trials % save_trial == 0 and hit_one:
+        		saver.save(sess, 'saved_networks/' + 'async_maze' + '-dqn', global_step = t)
+        		
+        		print('completed trial {}'.format(trials))
+        		#subtrials is used as a reference in certain testing areas
+        		#print('took {} subtrials'.format(sub_trials))
+
+        		hit_one = False
+        		
+        		sub_trials = 1
 
     	# update weights and minimize loss function for BATCH_SIZE amount of data points
 
     	# sample a minibatch to train on
-    	D = network_triangles()
-    	minibatch = random.sample(D, BATCH)
+    	if(train):
+    		D = network_triangles()
+    		minibatch = random.sample(D, BATCH)
 
-    	s1_update = [d[0] for d in minibatch]
-    	a_update  = [d[1] for d in minibatch]
-    	r_update  = [d[2] for d in minibatch]
-    	mv_update = [d[3] for d in minibatch]
-    	term      = [d[4] for d in minibatch]
+    		s1_update = [d[0] for d in minibatch]
+    		a_update  = [d[1] for d in minibatch]
+    		r_update  = [d[2] for d in minibatch]
+    		mv_update = [d[3] for d in minibatch]
+    		term      = [d[4] for d in minibatch]
 
-    	feed_dict = {state_input_1: s1_update, action_input: a_update, reward_input: r_update, max_val_input: mv_update, terminal_input: term}
+    		feed_dict = {state_input_1: s1_update, action_input: a_update, reward_input: r_update, max_val_input: mv_update, terminal_input: term}
 
-    	_, my_loss, start, _end_, my_tt = sess.run([optimizer, loss, action_array_1, target, tt], feed_dict=feed_dict)
+    		_, my_loss, start, _end_, my_tt = sess.run([optimizer, loss, action_array_1, target, tt], feed_dict=feed_dict)
 
 
     	# MODIFY THIS SLEEP IF THE GAME IS GOING TOO FAST.
-    	#time.sleep(0.01)
+    	#if gui_display:
+    		#time.sleep(1.0)
     	moves += 1
     	t += 1
-    	# save progress every 5000 iterations
-        if t % 5000 == 0:
-            saver.save(sess, 'saved_networks/' + 'async_maze' + '-dqn', global_step = t)
 
     #log = open(".\optimal_policy.txt", "w")
     #print(get_policy(), file = log)
-
+    #Test for maze completion without training
+    if(max_moves > 0):
+    	print('completed trial {}'.format(trials))
+    	print('took {} subtrials'.format(sub_trials))
 
 t = threading.Thread(target=run)
 t.daemon = True

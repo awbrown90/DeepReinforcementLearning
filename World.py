@@ -8,6 +8,7 @@ wall_width = 90
 pip_width = 6
 (x, y) = (5, 5)
 actions = ["up", "right", "down", "left"]
+gui_display = True
 
 board = Canvas(master, width=(x+1)*pip_width+x*wall_width, height=(y+1)*pip_width+y*wall_width)
 player = (0, y-1)
@@ -20,7 +21,7 @@ cell_scores = {}
 triangle_size = 0.1
 
 #wall for rows and columns
-rows, columns = maze_gen.generate(5)
+rows, columns = maze_gen.generate(5,0)
 goal = (2, 2)
 
 def create_triangle(i, j, action):
@@ -104,8 +105,9 @@ def render_player():
 	me = board.create_rectangle((player[0]+1)*pip_width+player[0]*wall_width+wall_width*1/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*1/3,
 			(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3, fill="black", width=1, tag="me")	
 
-render_grid()
-render_player()
+if(gui_display):
+	render_grid()
+	render_player()
 
 def do_move(dx, dy):
 
@@ -115,12 +117,13 @@ def do_move(dx, dy):
 	new_x = player[0] + dx
 	new_y = player[1] + dy
 	if (new_x >= 0) and (new_x < x) and (new_y >= 0) and (new_y < y) and wall_check( player[0], player[1], dx, dy):
-		board.coords(me, (new_x+1)*pip_width+new_x*wall_width+wall_width*1/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*1/3, 
+		if(gui_display):
+			board.coords(me, (new_x+1)*pip_width+new_x*wall_width+wall_width*1/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*1/3, 
 													(new_x+1)*pip_width+new_x*wall_width+wall_width*2/3, (new_y+1)*pip_width+new_y*wall_width+wall_width*2/3)
 		player = (new_x, new_y)
 		
 		if new_x == goal[0] and new_y == goal[0]:
-			print "Arrived at Goal "
+			#print "Arrived at Goal "
 			restart = True
 
 def see_move(dx, dy, i, j):
@@ -178,11 +181,6 @@ def get_pos_from_state(state):
 	#print x/2, y/2
 	return x/2, y/2
 
-def update_show(i,j):
-	for action in actions:
-		triangle = cell_scores[(i,j)][action]
-		board.itemconfigure(triangle, fill='blue')
-
 def wall_check(curr_x, curr_y, dx, dy):
 	#if going right
 	if(dx > 0):
@@ -214,19 +212,28 @@ def call_down(event):
 def call_left(event):
 	try_move(-1, 0)
 
-def restart_game():
+def set_maze_size(size):
+	if(size > 0):
+		maze_gen.set_maze_size(size)
+
+def restart_game(trial):
 	#print "lets restart"
 	global player, me, restart, rows, columns
 
-	rows, columns = rows, columns = maze_gen.generate(5)	
-	render_grid()
-	render_player()
+	rows, columns = rows, columns = maze_gen.generate(5,trial)
+	if(gui_display):
+		render_grid()
+		render_player()
 
 	player = (0, y-1)
 	restart = False
 
 def has_restarted():
 	return restart
+
+def gui_off():
+	global gui_display
+	gui_display = False
 
 def start_game():
 	master.mainloop()
