@@ -6,23 +6,23 @@ Values = []
 walls = 0
 
 class Stack:
-     def __init__(self):
-         self.items = []
+	def __init__(self):
+		self.items = []
 
-     def isEmpty(self):
-         return self.items == []
+	def isEmpty(self):
+		return self.items == []
 
-     def push(self, item):
-         self.items.append(item)
+	def push(self, item):
+		self.items.append(item)
 
-     def pop(self):
-         return self.items.pop()
+	def pop(self):
+		return self.items.pop()
 
-     def peek(self):
-         return self.items[len(self.items)-1]
+	def peek(self):
+		return self.items[len(self.items)-1]
 
-     def size(self):
-         return len(self.items)
+	def size(self):
+		return len(self.items)
 
 cell_stack = Stack()
 
@@ -61,7 +61,8 @@ def FloodFillValues():
 #set value in maze cell by x and y location
 def SetCell( x, y, value):
 	global Values, cell_stack
-
+	x = int(x)
+	y = int(y)
 	current_value = Values[x][y]
 	if current_value == -1 or value < current_value:
 		Values[x][y] = value
@@ -79,9 +80,6 @@ def SetCell( x, y, value):
 			cell_stack.push(MazeCell(x-1,y,value+1))
 
 def get_value(x,y):
+	x = int(x)
+	y = int(y)
 	return Values[x][y]
-
-
-
-
-	
