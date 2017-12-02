@@ -1,5 +1,10 @@
 __author__ = 'Aaron Brown'
-from Tkinter import *
+try:
+	# Python2
+	from Tkinter import *
+except ImportError:
+	# Python3
+	from tkinter import *
 import maze_gen
 import numpy as np
 master = Tk()
@@ -27,24 +32,24 @@ goal = (2, 2)
 def create_triangle(i, j, action):
 	if action == actions[0]:
 		return board.create_polygon((i+0.5-triangle_size)*wall_width+(i+1)*pip_width, (j+triangle_size)*wall_width+(j+1)*pip_width,
-                                    (i+0.5+triangle_size)*wall_width+(i+1)*pip_width, (j+triangle_size)*wall_width+(j+1)*pip_width,
-                                    (i+0.5)*wall_width+(i+1)*pip_width, j*wall_width+(j+1)*pip_width,
-                                    fill="green", width=1)
+									(i+0.5+triangle_size)*wall_width+(i+1)*pip_width, (j+triangle_size)*wall_width+(j+1)*pip_width,
+									(i+0.5)*wall_width+(i+1)*pip_width, j*wall_width+(j+1)*pip_width,
+									fill="green", width=1)
 	elif action == actions[2]:
 		return board.create_polygon((i+0.5-triangle_size)*wall_width+(i+1)*pip_width, (j+1-triangle_size)*wall_width+(j+1)*pip_width,
-                                    (i+0.5+triangle_size)*wall_width+(i+1)*pip_width, (j+1-triangle_size)*wall_width+(j+1)*pip_width,
-                                    (i+0.5)*wall_width+(i+1)*pip_width, (j+1)*wall_width+(j+1)*pip_width,
-                                    fill="green", width=1)
+									(i+0.5+triangle_size)*wall_width+(i+1)*pip_width, (j+1-triangle_size)*wall_width+(j+1)*pip_width,
+									(i+0.5)*wall_width+(i+1)*pip_width, (j+1)*wall_width+(j+1)*pip_width,
+									fill="green", width=1)
 	elif action == actions[3]:
 		return board.create_polygon((i+triangle_size)*wall_width+(i+1)*pip_width, (j+0.5-triangle_size)*wall_width+(j+1)*pip_width,
-                                    (i+triangle_size)*wall_width+(i+1)*pip_width, (j+0.5+triangle_size)*wall_width+(j+1)*pip_width,
-                                    i*wall_width+(i+1)*pip_width, (j+0.5)*wall_width+(j+1)*pip_width,
-                                    fill="green", width=1)
+									(i+triangle_size)*wall_width+(i+1)*pip_width, (j+0.5+triangle_size)*wall_width+(j+1)*pip_width,
+									i*wall_width+(i+1)*pip_width, (j+0.5)*wall_width+(j+1)*pip_width,
+									fill="green", width=1)
 	elif action == actions[1]:
 		return board.create_polygon((i+1-triangle_size)*wall_width+(i+1)*pip_width, (j+0.5-triangle_size)*wall_width+(j+1)*pip_width,
-                                    (i+1-triangle_size)*wall_width+(i+1)*pip_width, (j+0.5+triangle_size)*wall_width+(j+1)*pip_width,
-                                    (i+1)*wall_width+(i+1)*pip_width, (j+0.5)*wall_width+(j+1)*pip_width,
-                                    fill="green", width=1)
+									(i+1-triangle_size)*wall_width+(i+1)*pip_width, (j+0.5+triangle_size)*wall_width+(j+1)*pip_width,
+									(i+1)*wall_width+(i+1)*pip_width, (j+0.5)*wall_width+(j+1)*pip_width,
+									fill="green", width=1)
 
 def render_grid():
 	global walls, Width, x, y, player
@@ -77,7 +82,7 @@ def set_cell_score(i, j, action, vals):
 	triangle = cell_scores[(i,j)][action]
 	if(i==2 and j==2):
 		board.itemconfigure(triangle, fill='blue') #set center goal cells markers to blue
-		return	
+		return  
 	if action == 'up':
 		vact = 0
 	elif action == 'right':
@@ -103,7 +108,7 @@ def set_cell_score(i, j, action, vals):
 def render_player():
 	global me
 	me = board.create_rectangle((player[0]+1)*pip_width+player[0]*wall_width+wall_width*1/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*1/3,
-			(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3, fill="black", width=1, tag="me")	
+			(player[0]+1)*pip_width+player[0]*wall_width+wall_width*2/3, (player[1]+1)*pip_width+player[1]*wall_width+wall_width*2/3, fill="black", width=1, tag="me")  
 
 if(gui_display):
 	render_grid()
@@ -166,11 +171,11 @@ def get_state(position):
 	#fill in rows 
 	for j in np.arange(1,dim-1,2):
 		for i in np.arange(0,dim,2):
-			state[j][i] = -1*rows[j/2+1][i/2]	
+			state[j][i] = -1*rows[int(j/2)+1][int(i/2)]   
 	#fill in columns 
 	for j in np.arange(0,dim,2):
 		for i in np.arange(1,dim-1,2):
-			state[j][i] = -1*columns[j/2][i/2+1]
+			state[j][i] = -1*columns[int(j/2)][int(i/2)+1]
 	
 	return state
 

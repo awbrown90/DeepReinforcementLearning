@@ -12,29 +12,29 @@ saved_mazes = []
 saved_size = 0
 
 class Stack:
-     def __init__(self):
-         self.items = []
+	def __init__(self):
+		self.items = []
 
-     def isEmpty(self):
-         return self.items == []
+	def isEmpty(self):
+		 return self.items == []
 
-     def push(self, item):
-         self.items.append(item)
+	def push(self, item):
+		self.items.append(item)
 
-     def pop(self):
-         return self.items.pop()
+	def pop(self):
+		return self.items.pop()
 
-     def peek(self):
-         return self.items[len(self.items)-1]
+	def peek(self):
+		return self.items[len(self.items)-1]
 
-     def size(self):
-         return len(self.items)
+	def size(self):
+		return len(self.items)
 
 class MazeCell:
 	def __init__(self,x,y):
 		self.x = x
-    		self.y = y
-        	self.visited = False
+		self.y = y
+		self.visited = False
 
 def set_maze_size(size):
 	global saved_size
@@ -95,7 +95,7 @@ def generate(maze_size, trial):
 			#remove the wall in between currentCell and nextCell
 			removeWall(currentCell,nextCell)
 			currentCell = nextCell
-			cells[currentCell].visited = True	
+			cells[currentCell].visited = True   
 			unvistedCells -= 1
 		elif(cell_stack.size() > 0):
 			currentCell = cell_stack.pop()
@@ -120,7 +120,7 @@ def chooseUnvisitedNeighbor(currentCell):
 		candidates.append(currentCell+1)
 	# up
 	if(y > 0 and cells[currentCell-walls].visited is False):
-		candidates.append(currentCell-walls)	
+		candidates.append(currentCell-walls)    
 	# down
 	if(y < (walls-1) and cells[currentCell+walls].visited is False):
 		candidates.append(currentCell+walls)
@@ -141,17 +141,17 @@ def removeWall(currentCell,nextCell):
 
 	#remove column to the right of currentCell
 	if(nextCell-currentCell == 1):
-		columns[currentCell/walls][currentCell%walls+1] = 0
+		columns[int(currentCell/walls)][currentCell%walls+1] = 0
 		#print "right"
 	#remove column to the left of currentCell
 	elif(currentCell - nextCell == 1):
-		columns[currentCell/walls][currentCell%walls] = 0
+		columns[int(currentCell/walls)][currentCell%walls] = 0
 		#print "left"
 	#remove row above currentCell
 	elif(currentCell - nextCell == walls):
-		rows[currentCell/walls][currentCell%walls] = 0
+		rows[int(currentCell/walls)][currentCell%walls] = 0
 		#print "up"
 	#remove row below currentCell
 	elif(nextCell - currentCell == walls):
-		rows[currentCell/walls+1][currentCell%walls] = 0
+		rows[int(currentCell/walls)+1][currentCell%walls] = 0
 		#print "down"
